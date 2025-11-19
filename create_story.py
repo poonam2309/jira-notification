@@ -23,7 +23,7 @@ jira_email = require_env("JIRA_EMAIL")
 jira_api_token = require_env("JIRA_API_TOKEN")
 jira_project = require_env("JIRA_PROJECT_KEY")
 
-# GitHub context for description
+# GitHub metadata
 repo = os.getenv("GITHUB_REPOSITORY", "unknown")
 workflow = os.getenv("GITHUB_WORKFLOW", "workflow_dispatch")
 actor = os.getenv("GITHUB_ACTOR", "unknown")
@@ -31,10 +31,10 @@ run_id = os.getenv("GITHUB_RUN_ID", "unknown")
 server_url = os.getenv("GITHUB_SERVER_URL", "https://github.com")
 run_url = f"{server_url}/{repo}/actions/runs/{run_id}"
 
-summary = f"Story created from GitHub workflow_dispatch in {repo}"
+summary = f"Story created from workflow_dispatch in {repo}"
 
 description = textwrap.dedent(f"""
-    A Story was automatically created due to a GitHub `workflow_dispatch` event.
+    A Story was automatically created due to a GitHub `workflow_dispatch`.
 
     **Repository:** {repo}  
     **Workflow:** {workflow}  
@@ -47,11 +47,12 @@ payload = {
         "project": {"key": jira_project},
         "summary": summary,
         "description": description,
-        "issuetype": {"name": "Story"}      # <--- STORY TYPE
+        "issuetype": {"name": "Story"},
+        "labels": ["sk"]      # <--- ADD LABEL HERE
     }
 }
 
-# Auth header
+# Auth
 encoded_auth = base64.b64encode(f"{jira_email}:{jira_api_token}".encode()).decode()
 
 headers = {
@@ -61,13 +62,13 @@ headers = {
 
 url = f"{jira_base}/rest/api/3/issue"
 
-print("Creating Jira Story...")
+print("Creating Jira Story with label 'sk' ...")
 response = requests.post(url, headers=headers, data=json.dumps(payload))
 
-if response.status_code not in [200, 201]:
-    print(f"ERROR creating Jira Story: {response.status_code}")
+if response.status_code not in (200, 201):
+    print(f"ERROR: Failed to create Story ({response.status_code})")
     print(response.text)
     sys.exit(1)
 
-data = response.json()
-print(f"Successfully created Story: {data.get('key')}")
+resp_data = response.json()
+print(f"Successfully created Story: {resp_data.get('key')}")
